@@ -311,7 +311,6 @@ class Proto {
         var callbacks = _.flatten(_.slice(middlewares, offset));
 
         if (callbacks.length === 0) {
-            console.log('middlewaressssssss',middlewares,callbacks)
             throw new TypeError('Router.use() requires a middleware function')
         }
 

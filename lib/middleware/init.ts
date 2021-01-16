@@ -1,7 +1,8 @@
 import setPrototypeOf from 'setprototypeof'
+import App from '../application'
 
-const init = (app:any) => {
-    const expressInit = (req:any, res:any,next:any) => {
+const init = (app:App) => {
+    const expressInit = (req: any, res: any,next:any) => {
         if (app.enabled('x-powered-by')) res.setHeader('X-Powered-By', 'Express');
         req.res = res;
         res.req = req;

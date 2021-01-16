@@ -9,6 +9,8 @@ import {compileETag,compileQueryParser,compileTrust} from './utils'
 import middleware from './middleware/init'
 import query from './middleware/query'
 import Router from './router'
+import Req from './request'
+import Res from './response'
 
 import {EventEmitter} from 'events'
 import {RequestListener} from 'http'
@@ -21,7 +23,6 @@ class App extends EventEmitter {
     cache: any;
     engines: any;
     settings: any;
-    // on: any;
     request: any;
     response: any;
     locals: any;
@@ -33,11 +34,18 @@ class App extends EventEmitter {
         this.cache = {};
         this.engines = {};
         this.settings = {};
-
-        this.defaultCongiguration();
+        this.request = Object.create(new Req('request'), {
+          app: { configurable: true, enumerable: true, writable: true, value: this }
+        })
+      
+        // expose the prototype that will get set on responses
+        this.response = Object.create(new Res('response'), {
+          app: { configurable: true, enumerable: true, writable: true, value: this }
+        })
+        this.defaultConfiguration();
     }
 
-    defaultCongiguration() {
+    defaultConfiguration() {
         const env = process.env.NODE_ENV || 'development';
 
         this.enable('x-powered-by');
@@ -258,9 +266,8 @@ class App extends EventEmitter {
     }
 
     listen(...args: any){
-        const server = http.createServer((req, res) =>{
-            this.response = res
-            this.request = req
+        const server = http.createServer((req:any, res: any) =>{
+            this.handle(req, res,null)
         })
         return server.listen(...args)
     }

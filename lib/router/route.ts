@@ -84,9 +84,7 @@ class Route {
 
     get(...handlers: Function[]){
 
-        console.log('222222222')
         for(const handler of handlers){
-            console.log('handleeeeee',handler)
             myDebug(`get ${this.path}`)
             const layer = new Layer('/',{}, handler)
             layer.method = 'get'

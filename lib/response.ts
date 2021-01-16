@@ -12,11 +12,12 @@ import statuses from 'statuses'
 import merge from 'utils-merge';
 import { sign } from 'cookie-signature';
 import cookie from 'cookie';
-import {mime, SendStream} from 'send';
+import { SendStream} from 'send';
 import send from 'send'
 import vary from 'vary';
 const extname = path.extname;
 const resolve = path.resolve;
+const mime = send.mime
 
 const myDeprecate = deprecate('express')
 const charsetRegExp = /;\s*charset\s*=/;
@@ -185,7 +186,7 @@ class Res extends http.ServerResponse {
                 this.type('txt');
             }
 
-            deprecate('res.send(status): Use res.sendStatus(status) instead');
+            myDeprecate('res.send(status): Use res.sendStatus(status) instead');
             this.statusCode = chunk;
             chunk = (statuses as any)[chunk]
         }
@@ -495,7 +496,7 @@ class Res extends http.ServerResponse {
                     throw new TypeError('Content-Type cannot be set to an Array');
                 }
                 if (!charsetRegExp.test(value)) {
-                    const charset = mime.getType(value.split(';')[0]);
+                    const charset = (mime as any).charsets.lookup(value.split(';')[0]);
                     if (charset) value += '; charset=' + charset.toLowerCase();
                 }
             }
@@ -569,7 +570,7 @@ class Res extends http.ServerResponse {
                 status = arguments[0];
                 address = arguments[1];
             } else {
-                deprecate('res.redirect(url, status): Use res.redirect(status, url) instead');
+              myDeprecate('res.redirect(url, status): Use res.redirect(status, url) instead');
                 status = arguments[1];
             }
         }
@@ -606,7 +607,7 @@ class Res extends http.ServerResponse {
     vary(field: any) {
         // checks for back-compat
         if (!field || (Array.isArray(field) && !field.length)) {
-            deprecate('res.vary(): Provide a field name');
+          myDeprecate('res.vary(): Provide a field name');
             return this;
         }
 

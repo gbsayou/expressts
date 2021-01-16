@@ -51,6 +51,19 @@ class Layer {
             next(err)
         }
     }
+    handle_request(req: any, res: any, next: Function){
+      const fn = this.handle
+      if (fn.length > 3) {
+        // not a standard request handler
+        return next();
+      }
+    
+      try {
+        fn(req, res, next);
+      } catch (err) {
+        next(err);
+      }
+    }
     match(path: any) {
         let match: any
         if (path != null) {
