@@ -19,6 +19,7 @@ class Req extends http.IncomingMessage {
     connection: any;
     app: any;
     res: any;
+    next: Function | undefined;
     constructor(name: any) {
         super(name)
         this.acceptsEncoding = myDeprecate.function(this.acceptsEncodings,

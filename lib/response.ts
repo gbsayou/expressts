@@ -153,10 +153,12 @@ class Res extends http.ServerResponse {
     contentType: any;
     req: any;
     app: any;
+    locals: Object;
     constructor(name: any) {
         super(name)
         this.header = this.set
         this.contentType = this.type
+        this.locals = Object.create(null)
     }
 
     status(code: number):Res {

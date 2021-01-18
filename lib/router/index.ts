@@ -1,20 +1,21 @@
 import Route from './route';
 import Layer from './layer';
+import http from 'http'
 import methods from 'methods'
 import mixin from 'utils-merge'
 import debug from 'debug'
 import deprecate from 'depd'
 import parseUrl from 'parseurl'
-import setPrototypeOf from 'setprototypeof'
-import layer from './layer';
 import _ from 'lodash'
+import Res from '../response'
+import Req from '../request'
 
 const myDebug = debug('express:router')
 const myDeprecate = deprecate('express')
 
 const objectRegExp = /^\[object (\S+)\]$/;
 
-class Proto {
+class Router {
     options: any;
     params: any;
     _params: any;
@@ -68,7 +69,7 @@ class Proto {
     handle(req: any, res: any, out: any) {
         myDebug(`dispatch ${req.method} ${req.url}`)
         let idx = 0
-        const protohost = getProtohost(req.url) || ''
+        const protoHost = getProtoHost(req.url) || ''
         let removed = '';
         let slashAdded = false;
         const paramcalled = {};
@@ -88,7 +89,7 @@ class Proto {
             // restore altered req.url
             if (removed.length !== 0) {
                 req.baseUrl = parentUrl;
-                req.url = protohost + removed + req.url.substr(protohost.length);
+                req.url = protoHost + removed + req.url.substr(protoHost.length);
                 removed = '';
             }
 
@@ -168,44 +169,44 @@ class Proto {
             var layerPath = layer.path;
 
             // this should be done for the layer
-            this.process_params(layer, paramcalled, req, res, (err: any) => {
+            this.processParams(layer, paramcalled, req, res, (err: any) => {
                 if (err) {
                     return next(layerError || err);
                 }
 
                 if (route) {
-                    return layer.handle_request(req, res, next);
+                    return layer.handleRequest(req, res, next);
                 }
 
-                trim_prefix(layer, layerError, layerPath, path);
+                trimPrefix(layer, layerError, layerPath, path);
             });
         }
         req.next = next
 
         if (req.method === 'OPTIONS') {
-            done = wrap(done, (old: any, err: any) => {
+            done = wrap(done, (old: Function, err: Error) => {
                 if (err || options.length === 0) return old(err)
                 sendOptionsResponse(res, options, old)
             })
         }
 
-        req.basuUrl = parentUrl;
+        req.baseUrl = parentUrl;
         req.originalUrl = req.originalUrl || req.url
 
-        const trim_prefix = (layer: any, layerError: any, layerPath: any, path: any) => {
+        const trimPrefix = (layer: Layer, layerError: Error, layerPath: string, path: any) => {
             if (layerPath.length !== 0) {
                 // Validate path breaks on a path separator
-                var c = path[layerPath.length]
+                const c = path[layerPath.length]
                 if (c && c !== '/' && c !== '.') return next(layerError)
 
                 // Trim off the part of the url that matches the route
                 // middleware (.use stuff) needs to have the path stripped
-                debug(`trim prefix (${layerPath}) from url ${req.url}`,);
+                myDebug(`trim prefix (${layerPath}) from url ${req.url}`,);
                 removed = layerPath;
-                req.url = protohost + req.url.substr(protohost.length + removed.length);
+                req.url = protoHost + req.url.substr(protoHost.length + removed.length);
 
                 // Ensure leading slash
-                if (!protohost && req.url[0] !== '/') {
+                if (!protoHost && req.url[0] !== '/') {
                     req.url = '/' + req.url;
                     slashAdded = true;
                 }
@@ -216,19 +217,18 @@ class Proto {
                     : removed);
             }
 
-            debug(`${layer.name}, ${layerPath}, ${req.originalUrl}`);
+            myDebug(`${layer.name}, ${layerPath}, ${req.originalUrl}`);
 
             if (layerError) {
-                layer.handle_error(layerError, req, res, next);
+                layer.handleError(layerError, req, res, next);
             } else {
-                layer.handle_request(req, res, next);
+                layer.handleRequest(req, res, next);
             }
         }
-
-
         next()
     }
-    process_params(layer: any, called: any, req: any, res: any, done: any) {
+
+    processParams(layer: Layer, called: any, req: Req, res: Res, done: Function) {
         const params = this.params
         const keys = layer.keys
         if (!keys || keys.length === 0) {
@@ -236,13 +236,14 @@ class Proto {
         }
 
         let i = 0;
-        let name;
         let paramIndex = 0;
+        let name;
         let key: any;
         let paramVal: any;
         let paramCallbacks: any;
         let paramCalled: any;
-        const param = (err?: any): any => {
+
+        const param = (err?: Error):any => {
             if (err) {
                 return done(err);
             }
@@ -276,59 +277,57 @@ class Proto {
                 match: paramVal,
                 value: paramVal
             };
-
-            const paramCallback = (err?: any) => {
-                const fn = paramCallbacks[paramIndex++];
-                paramCalled.value = req.params[key.name];
-
-                if (err) {
-                    // store error
-                    paramCalled.error = err;
-                    param(err);
-                    return;
-                }
-
-                if (!fn) return param();
-
-                try {
-                    fn(req, res, paramCallback, paramVal, key.name);
-                } catch (e) {
-                    paramCallback(e);
-                }
-            }
-            paramCallback();
+            paramCallback()
         }
+        
+        const paramCallback = (err?: Error) => {
+          const fn = paramCallbacks[paramIndex++];
+          paramCalled.value = req.params[key.name];
 
+          if (err) {
+              // store error
+              paramCalled.error = err;
+              param(err);
+              return;
+          }
+
+          if (!fn) return param();
+
+          try {
+              fn(req, res, paramCallback, paramVal, key.name);
+          } catch (e) {
+              paramCallback(e);
+          }
+      }
+      params();
     }
 
-    use(...middlewares: any[]) {
+    use(...middleware: any[]) {
         let offset: any = 0
         let path = '/'
-        if(typeof middlewares[0] === 'string'){
+        if(typeof middleware[0] === 'string'){
             offset = 1
-            path = middlewares[0]
+            path = middleware[0]
         }
-        var callbacks = _.flatten(_.slice(middlewares, offset));
+        var callbacks = _.flatten(_.slice(middleware, offset));
 
         if (callbacks.length === 0) {
             throw new TypeError('Router.use() requires a middleware function')
         }
 
-        for (var i = 0; i < callbacks.length; i++) {
-            var fn: any = callbacks[i];
-
-            if (typeof fn !== 'function') {
-                throw new TypeError('Router.use() requires a middleware function but got a ' + gettype(fn))
+        for (const callback of callbacks) {
+            if (typeof callback !== 'function') {
+                throw new TypeError('Router.use() requires a middleware function but got a ' + getType(callback))
             }
 
             // add the middleware
-            debug(`use ${path}, ${fn.name || '<anonymous>'}`,)
+            myDebug(`use ${path}, ${callback.name || '<anonymous>'}`,)
 
-            var layer = new Layer(path, {
+            const layer = new Layer(path, {
                 sensitive: this.caseSensitive,
                 strict: false,
                 end: false
-            }, fn);
+            }, callback);
 
             layer.route = undefined;
 
@@ -336,10 +335,11 @@ class Proto {
         }
         return this;
     }
-    route(path: any) {
-        var route = new Route(path);
 
-        var layer = new Layer(path, {
+    route(path: string) {
+        const route = new Route(path);
+
+        const layer = new Layer(path, {
             sensitive: this.caseSensitive,
             strict: this.strict,
             end: true
@@ -354,17 +354,14 @@ class Proto {
 
 
 // append methods to a list of methods
-function appendMethods(list: any, addition: any) {
-    for (var i = 0; i < addition.length; i++) {
-        var method = addition[i];
-        if (list.indexOf(method) === -1) {
-            list.push(method);
-        }
+const appendMethods = (list: Array<any>, addition: Array<any>) => {
+    for(const method of addition){
+      if(list.indexOf(method) === -1)list.push(method)
     }
 }
 
 // get pathname of request
-function getPathname(req: any) {
+const getPathname = (req: Req) => {
     try {
         return parseUrl(req)?.pathname;
     } catch (err) {
@@ -373,33 +370,26 @@ function getPathname(req: any) {
 }
 
 // Get get protocol + host for a URL
-function getProtohost(url: any) {
+const getProtoHost = (url?: string) => {
     if (typeof url !== 'string' || url.length === 0 || url[0] === '/') {
         return undefined
     }
 
-    var searchIndex = url.indexOf('?')
-    var pathLength = searchIndex !== -1
-        ? searchIndex
-        : url.length
-    var fqdnIndex = url.substr(0, pathLength).indexOf('://')
+    const searchIndex = url.indexOf('?')
+    const pathLength = searchIndex !== -1 ? searchIndex : url.length
+    const fqdnIndex = url.substr(0, pathLength).indexOf('://')
 
-    return fqdnIndex !== -1
-        ? url.substr(0, url.indexOf('/', 3 + fqdnIndex))
-        : undefined
+    return fqdnIndex !== -1 ? url.substr(0, url.indexOf('/', 3 + fqdnIndex)) : undefined
 }
 
 // get type for error message
-function gettype(obj: any) {
-    var type = typeof obj;
-
-    if (type !== 'object') {
-        return type;
+const getType = (obj: any) => {
+    if (typeof obj !== 'object') {
+        return typeof obj;
     }
 
     // inspect [[Class]] for objects
-    return toString.call(obj)
-        .replace(objectRegExp, '$1');
+    return toString.call(obj).replace(objectRegExp, '$1');
 }
 
 /**
@@ -410,7 +400,7 @@ function gettype(obj: any) {
  * @private
  */
 
-function matchLayer(layer: any, path: any) {
+const matchLayer = (layer: Layer, path: string) => {
     try {
         return layer.match(path);
     } catch (err) {
@@ -419,21 +409,21 @@ function matchLayer(layer: any, path: any) {
 }
 
 // merge params with parent params
-function mergeParams(params: any, parent: any) {
+const mergeParams = (params: any, parent: any) => {
     if (typeof parent !== 'object' || !parent) {
         return params;
     }
 
     // make copy of parent for base
-    var obj = mixin({}, parent);
+    const obj = mixin({}, parent);
 
     // simple non-numeric merging
     if (!(0 in params) || !(0 in parent)) {
         return mixin(obj, params);
     }
 
-    var i = 0;
-    var o = 0;
+    let i = 0;
+    let o = 0;
 
     // determine numeric gaps
     while (i in params) {
@@ -458,19 +448,19 @@ function mergeParams(params: any, parent: any) {
 }
 
 // restore obj props after function
-function restore(fn: any, ...obj: any[]) {
+const restore=(fn: Function, ...obj: any[])=> {
     var props = new Array(obj.length - 1);
-    var vals = new Array(obj.length - 1);
+    var values = new Array(obj.length - 1);
 
-    for (var i = 0; i < props.length; i++) {
-        props[i] = obj[i + 1];
-        vals[i] = obj[props[i]];
-    }
+    props.forEach((prop, i)=>{
+      prop = obj[i + 1];
+      values[i] = obj[prop];
+    })
 
-    return function (...args: any[]) {
+    return (...args: any[])=> {
         // restore vals
-        for (var i = 0; i < props.length; i++) {
-            obj[props[i]] = vals[i];
+        for (let i = 0; i < props.length; i++) {
+            obj[props[i]] = values[i];
         }
 
         return fn.apply(null, args);
@@ -478,9 +468,9 @@ function restore(fn: any, ...obj: any[]) {
 }
 
 // send an OPTIONS response
-function sendOptionsResponse(res: any, options: any, next: any) {
+const sendOptionsResponse=(res: Res, options: Array<any>, next: Function) =>{
     try {
-        var body = options.join(',');
+        const body = options.join(',');
         res.set('Allow', body);
         res.send(body);
     } catch (err) {
@@ -489,17 +479,10 @@ function sendOptionsResponse(res: any, options: any, next: any) {
 }
 
 // wrap a function
-function wrap(old: any, fn: any) {
-    return function proxy(...args: any[]) {
-        var args = new Array(args.length + 1);
-
-        args[0] = old;
-        for (var i = 0, len = args.length; i < len; i++) {
-            args[i + 1] = args[i];
-        }
-
-        fn.apply(null, args);
+const wrap = (old: Function, fn: Function) =>{
+    return (...args: any[]) => {
+        fn.apply(null, [old, ...args]);
     };
 }
 
-export default Proto
+export default Router

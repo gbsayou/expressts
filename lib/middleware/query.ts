@@ -1,12 +1,14 @@
 import parseUrl from 'parseurl'
 import qs from 'qs'
+import Req from '../request'
+import Res from '../response'
 
-export default (options:any) => {
-    let opts = Object.assign({}, options)
-    let queryparse = qs.parse;
+export default (options:Function | Object) => {
+    let opts: any = Object.assign({}, options)
+    let queryParse: Function = qs.parse;
 
     if (typeof options === 'function') {
-      queryparse = options;
+      queryParse = options;
       opts = undefined;
     }
   
@@ -15,10 +17,10 @@ export default (options:any) => {
       opts.allowPrototypes = true;
     }
   
-    return function query(req:any, res:any, next:any){
+    return  (req: Req, res: Res, next: Function) => {
       if (!req.query) {
-        var val:any = parseUrl(req)?.query;
-        req.query = queryparse(val, opts);
+        const val: any = parseUrl(req)?.query;
+        req.query = queryParse(val, opts);
       }
   
       next();

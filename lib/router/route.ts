@@ -64,9 +64,9 @@ class Route {
             }
 
             if (err) {
-                layer.handle_error(err, req, res, next);
+                layer.handleError(err, req, res, next);
             } else {
-                layer.handle_request(req, res, next);
+                layer.handleRequest(req, res, next);
             }
         }
         next();

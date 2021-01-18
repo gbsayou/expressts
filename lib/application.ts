@@ -266,8 +266,8 @@ class App extends EventEmitter {
     }
 
     listen(...args: any){
-        const server = http.createServer((req:any, res: any) =>{
-            this.handle(req, res,null)
+        const server = http.createServer((req:http.IncomingMessage, res: http.ServerResponse) =>{
+            this.handle(req, res, null)
         })
         return server.listen(...args)
     }

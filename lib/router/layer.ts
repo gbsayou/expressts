@@ -40,7 +40,7 @@ class Layer {
         this.path = undefined
     }
 
-    handle_error(error: Error, req: any, res: any, next: Function) {
+    handleError(error: Error, req: any, res: any, next: Function) {
         const fn = this.handle
         if (fn.length !== 4) {
             return next(error)
@@ -51,7 +51,7 @@ class Layer {
             next(err)
         }
     }
-    handle_request(req: any, res: any, next: Function){
+    handleRequest(req: any, res: any, next: Function){
       const fn = this.handle
       if (fn.length > 3) {
         // not a standard request handler
