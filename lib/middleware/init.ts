@@ -5,7 +5,9 @@ import Res from '../response'
 
 const init = (app: App) => {
     const expressInit = (req: Req, res: Res, next: Function) => {
-        if (app.enabled('x-powered-by')) res.setHeader('X-Powered-By', 'Express');
+        if (app.enabled('x-powered-by')) {
+          res.setHeader('X-Powered-By', 'Expressts');
+        }
         req.res = res;
         res.req = req;
         req.next = next;

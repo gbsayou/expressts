@@ -196,7 +196,7 @@ class App extends EventEmitter {
     }
 
     set(setting: string, val?: any){
-        if(typeof val === undefined){
+        if(typeof val === 'undefined'){
             return this.settings[setting]
         }
 
