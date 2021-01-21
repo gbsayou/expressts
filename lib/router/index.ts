@@ -1,8 +1,6 @@
 import Route from './route';
 import Layer from './layer';
-import http from 'http'
 import methods from 'methods'
-import mixin from 'utils-merge'
 import debug from 'debug'
 import deprecate from 'depd'
 import parseUrl from 'parseurl'
@@ -19,17 +17,15 @@ class Router {
     options: any;
     params: any;
     _params: any;
-    caseSensitive: any;
-    mergeParams: any;
-    strict: any;
-    stack: any;
+    caseSensitive: boolean;
+    strict: boolean;
+    stack: Array<Layer>;
 
     constructor(options: any) {
         this.options = options
         this.params = {};
         this._params = {};
         this.caseSensitive = options.caseSensitive;
-        this.mergeParams = options.mergeParams
         this.strict = options.strict
         this.stack = []
     }
@@ -163,9 +159,7 @@ class Router {
             }
 
             // Capture one-time layer values
-            req.params = this.mergeParams
-                ? mergeParams(layer.params, parentParams)
-                : layer.params;
+            req.params = layer.params;
             var layerPath = layer.path;
 
             // this should be done for the layer
@@ -406,45 +400,6 @@ const matchLayer = (layer: Layer, path: string) => {
     } catch (err) {
         return err;
     }
-}
-
-// merge params with parent params
-const mergeParams = (params: any, parent: any) => {
-    if (typeof parent !== 'object' || !parent) {
-        return params;
-    }
-
-    // make copy of parent for base
-    const obj = mixin({}, parent);
-
-    // simple non-numeric merging
-    if (!(0 in params) || !(0 in parent)) {
-        return mixin(obj, params);
-    }
-
-    let i = 0;
-    let o = 0;
-
-    // determine numeric gaps
-    while (i in params) {
-        i++;
-    }
-
-    while (o in parent) {
-        o++;
-    }
-
-    // offset numeric indices in params before merge
-    for (i--; i >= 0; i--) {
-        params[i + o] = params[i];
-
-        // create holes for the merge when necessary
-        if (i < o) {
-            delete params[i];
-        }
-    }
-
-    return mixin(obj, params);
 }
 
 // restore obj props after function

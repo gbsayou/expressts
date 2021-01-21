@@ -13,7 +13,6 @@ import Req from './request'
 import Res from './response'
 
 import {EventEmitter} from 'events'
-import {RequestListener} from 'http'
 const trustProxyDefaultSymbol = '@@sysbol:trust_proxy_default';
 
 const myDebug = debug('express:application')

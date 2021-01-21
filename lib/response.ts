@@ -9,7 +9,6 @@ import { isAbsolute, normalizeType, normalizeTypes, setCharset } from './utils';
 import onFinished from 'on-finished';
 import path from 'path';
 import statuses from 'statuses'
-import merge from 'utils-merge';
 import { sign } from 'cookie-signature';
 import cookie from 'cookie';
 import { SendStream} from 'send';
@@ -515,12 +514,12 @@ class Res extends http.ServerResponse {
         return this.getHeader(field);
     }
     clearCookie(name: string, options: any) {
-        const opts = merge({ expires: new Date(1), path: '/' }, options);
+        const opts = Object.assign({ expires: new Date(1), path: '/' }, options);
 
         return this.cookie(name, '', opts);
     }
     cookie(name: string, value: any, options: any) {
-        const opts: any = merge({}, options);
+        const opts: any = Object.assign({}, options);
         const secret = this.req.secret;
         const signed = opts.signed;
 
