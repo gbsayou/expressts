@@ -14,9 +14,9 @@ import cookie from 'cookie';
 import { SendStream} from 'send';
 import send from 'send'
 import vary from 'vary';
+import mime from 'mime';
 const extname = path.extname;
 const resolve = path.resolve;
-const mime = send.mime
 
 const myDeprecate = deprecate('express')
 const charsetRegExp = /;\s*charset\s*=/;
@@ -497,7 +497,7 @@ class Res extends http.ServerResponse {
                     throw new TypeError('Content-Type cannot be set to an Array');
                 }
                 if (!charsetRegExp.test(value)) {
-                    const charset = (mime as any).charsets.lookup(value.split(';')[0]);
+                    const charset = mime.getType(value.split(';')[0]);
                     if (charset) value += '; charset=' + charset.toLowerCase();
                 }
             }
