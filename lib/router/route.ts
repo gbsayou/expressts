@@ -101,6 +101,26 @@ class Route {
             this.stack.push(layer);
         }
     }
+
+    post(...handlers: Function[]){
+        for(const handler of handlers){
+            myDebug(`post ${this.path}`)
+            const layer = new Layer('/',{}, handler)
+            layer.method = 'post'
+            this.methods['post'] = true;
+            this.stack.push(layer);
+        }
+    }
+
+    delete(...handlers: Function[]){
+        for(const handler of handlers){
+            myDebug(`delete ${this.path}`)
+            const layer = new Layer('/',{}, handler)
+            layer.method = 'delete'
+            this.methods['delete'] = true;
+            this.stack.push(layer);
+        }
+    }
 }
 
 export default Route

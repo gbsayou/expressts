@@ -205,9 +205,20 @@ class App extends EventEmitter {
     }
 
     put(path: string, ...handler:Function[]){
-
         const route: Route = this._router.route(path)
         route.put(...handler)
+        return this
+    }
+
+    post(path: string, ...handler:Function[]){
+        const route: Route = this._router.route(path)
+        route.post(...handler)
+        return this
+    }
+
+    delete(path: string, ...handler:Function[]){
+        const route: Route = this._router.route(path)
+        route.delete(...handler)
         return this
     }
 
