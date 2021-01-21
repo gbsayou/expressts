@@ -1,10 +1,7 @@
 import App from './application'
-import Req from './request'
-import Res from './request'
 
-const createApplication = () => {
-    const app = new App()
-    app.init();
+const createApplication = (config?:{caseSensitiveRouting?: boolean, strictRouting?:boolean}) => {
+    const app = new App(config||{})
     return app;
 }
 

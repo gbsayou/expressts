@@ -15,7 +15,7 @@ class Route {
         myDebug(`new ${path}`)
         this.methods = {}
     }
-    _handles_method(method: string) {
+    handlesMethod(method: string) {
         if (this.methods._all) {
             return true
         }
@@ -54,7 +54,7 @@ class Route {
                 return done(err)
             }
 
-            var layer = stack[idx++];
+            const layer: Layer = stack[idx++];
             if (!layer) {
                 return done(err);
             }
@@ -83,12 +83,21 @@ class Route {
     }
 
     get(...handlers: Function[]){
-
         for(const handler of handlers){
             myDebug(`get ${this.path}`)
             const layer = new Layer('/',{}, handler)
             layer.method = 'get'
             this.methods['get'] = true;
+            this.stack.push(layer);
+        }
+    }
+
+    put(...handlers: Function[]){
+        for(const handler of handlers){
+            myDebug(`put ${this.path}`)
+            const layer = new Layer('/',{}, handler)
+            layer.method = 'put'
+            this.methods['put'] = true;
             this.stack.push(layer);
         }
     }

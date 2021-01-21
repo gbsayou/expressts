@@ -14,19 +14,15 @@ const myDeprecate = deprecate('express')
 const objectRegExp = /^\[object (\S+)\]$/;
 
 class Router {
-    options: any;
+    options: {strict:boolean, caseSensitive: boolean};
     params: any;
     _params: any;
-    caseSensitive: boolean;
-    strict: boolean;
     stack: Array<Layer>;
 
-    constructor(options: any) {
+    constructor(options:  {strict:boolean, caseSensitive: boolean}) {
         this.options = options
         this.params = {};
         this._params = {};
-        this.caseSensitive = options.caseSensitive;
-        this.strict = options.strict
         this.stack = []
     }
 
@@ -72,11 +68,10 @@ class Router {
         let options: any = [];
         const stack = this.stack;
 
-        const parentParams = req.params;
         const parentUrl = req.baseUrl || '';
-        let done: any= restore(out, req, 'baseUrl', 'next', 'params')
+        let done: Function= restore(out, req, 'baseUrl', 'next', 'params')
 
-        const next = (err?: any) => {
+        const next = (err?: Error | string) => {
             let layerError: any = err === 'route' ? null : err
             if (slashAdded) {
                 req.url = req.url.substr()
@@ -91,18 +86,18 @@ class Router {
 
             // signal to exit router
             if (layerError === 'router') {
-                setImmediate(done, null)
+                setImmediate(done as any, null)
                 return
             }
 
             // no more matching layers
             if (idx >= stack.length) {
-                setImmediate(done, layerError);
+                setImmediate(done as any, layerError);
                 return;
             }
 
             // get pathname of request
-            var path = getPathname(req);
+            const path: string | null | undefined = getPathname(req);
 
             if (path == null) {
                 return done(layerError);
@@ -133,8 +128,8 @@ class Router {
                     continue;
                 }
 
-                var method = req.method;
-                var has_method = route._handles_method(method);
+                const method: string = req.method;
+                const has_method: boolean = route.handlesMethod(method);
 
                 // build up automatic options response
                 if (!has_method && method === 'OPTIONS') {
@@ -160,10 +155,10 @@ class Router {
 
             // Capture one-time layer values
             req.params = layer.params;
-            var layerPath = layer.path;
+            const layerPath: string = layer.path;
 
             // this should be done for the layer
-            this.processParams(layer, paramcalled, req, res, (err: any) => {
+            this.processParams(layer, paramcalled, req, res, (err?: Error) => {
                 if (err) {
                     return next(layerError || err);
                 }
@@ -293,7 +288,7 @@ class Router {
               paramCallback(e);
           }
       }
-      params();
+      param();
     }
 
     use(...middleware: any[]) {
@@ -303,7 +298,7 @@ class Router {
             offset = 1
             path = middleware[0]
         }
-        var callbacks = _.flatten(_.slice(middleware, offset));
+        const callbacks: Function[] = _.flatten(_.slice(middleware, offset));
 
         if (callbacks.length === 0) {
             throw new TypeError('Router.use() requires a middleware function')
@@ -318,7 +313,7 @@ class Router {
             myDebug(`use ${path}, ${callback.name || '<anonymous>'}`,)
 
             const layer = new Layer(path, {
-                sensitive: this.caseSensitive,
+                sensitive: this.options.caseSensitive,
                 strict: false,
                 end: false
             }, callback);
@@ -334,8 +329,8 @@ class Router {
         const route = new Route(path);
 
         const layer = new Layer(path, {
-            sensitive: this.caseSensitive,
-            strict: this.strict,
+            sensitive: this.options.caseSensitive,
+            strict: this.options.strict,
             end: true
         }, route.dispatch.bind(route));
 
@@ -404,8 +399,8 @@ const matchLayer = (layer: Layer, path: string) => {
 
 // restore obj props after function
 const restore=(fn: Function, ...obj: any[])=> {
-    var props = new Array(obj.length - 1);
-    var values = new Array(obj.length - 1);
+    const props: Array<any> = new Array(obj.length - 1);
+    const values: Array<any> = new Array(obj.length - 1);
 
     props.forEach((prop, i)=>{
       prop = obj[i + 1];

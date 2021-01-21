@@ -9,6 +9,7 @@ import {compileETag,compileQueryParser,compileTrust} from './utils'
 import middleware from './middleware/init'
 import query from './middleware/query'
 import Router from './router'
+import Route from './router/route'
 import Req from './request'
 import Res from './response'
 
@@ -17,22 +18,22 @@ const trustProxyDefaultSymbol = '@@sysbol:trust_proxy_default';
 
 const myDebug = debug('express:application')
 
-
 class App extends EventEmitter {
-    cache: any;
-    engines: any;
     settings: any;
     request: any;
     response: any;
     locals: any;
     mountpath: any;
-    _router: any;
+    _router: Router;
     parent: any;
 
-    init() {
-        this.cache = {};
-        this.engines = {};
+    constructor({caseSensitiveRouting = false,strictRouting = false}){
+        super();
         this.settings = {};
+
+        if(caseSensitiveRouting)this.enable('caseSensitiveRouting')
+        if(strictRouting)this.enable('strictRouting')
+
         this.request = Object.create(new Req('request'), {
           app: { configurable: true, enumerable: true, writable: true, value: this }
         })
@@ -41,6 +42,15 @@ class App extends EventEmitter {
         this.response = Object.create(new Res('response'), {
           app: { configurable: true, enumerable: true, writable: true, value: this }
         })
+
+        this._router = new Router({
+            caseSensitive: caseSensitiveRouting,
+            strict: strictRouting
+        });
+
+        this._router.use(query(this.get('query parser fn')));
+        this._router.use(middleware.init(this))
+
         this.defaultConfiguration();
     }
 
@@ -70,7 +80,6 @@ class App extends EventEmitter {
 
             setprototypeof(this.request, parent.request)
             setprototypeof(this.response, parent.response)
-            setprototypeof(this.engines, parent.engines)
             setprototypeof(this.settings, parent.settings)
         });
 
@@ -80,38 +89,12 @@ class App extends EventEmitter {
 
         this.locals.settings = this.settings;
 
-        // this.set('view', View);
-        // this.set('views', resolve('views'));
         this.set('jsonp callback name', 'callback');
 
-        if (env === 'production') {
-            this.enable('view cache');
-        }
-
-        Object.defineProperty(this, 'router', {
-            get: () => {
-                throw new Error('app.router is deprecated!')
-            }
-        })
     }
 
-    put(path: string, handler:Function){
-        this.lazyrouter()
-
-        const route = this._router.route(path)
-        route.put.apply(route, handler)
-        return this
-    }
-
-    lazyrouter() {
-        if (!this._router) {
-            this._router = new Router({
-                caseSensitive: this.enabled('case sensitive routing'),
-                strict: this.enabled('strict routing')
-            });
-            this._router.use(query(this.get('query parser fn')));
-            this._router.use(middleware.init(this))
-        }
+    get router() {
+        throw new Error('app.router is deprecated!')
     }
 
     handle(req: any, res: any, callback: any) {
@@ -149,7 +132,6 @@ class App extends EventEmitter {
             throw new TypeError('app.use() requires a middleware function')
         }
 
-        this.lazyrouter();
         const router = this._router;
         fns.forEach(fn => {
             if (!fn || !fn.handle || !fn.set) {
@@ -173,17 +155,10 @@ class App extends EventEmitter {
     }
 
     route(path:any){
-        this.lazyrouter()
         return this._router.route(path)
     }
 
-    engine(){
-
-        return this
-    }
-
     param(name: any, fn:Function){
-        this.lazyrouter();
         if(Array.isArray(name)){
             for(const item of name){
                 this.param(item, fn)
@@ -223,10 +198,16 @@ class App extends EventEmitter {
 
     get(setting:any, ...handler:Function[]){
         if(typeof handler === 'undefined') return this.settings[setting]
-        this.lazyrouter()
 
         const route = this._router.route(setting)
         route.get(...handler)
+        return this
+    }
+
+    put(path: string, ...handler:Function[]){
+
+        const route: Route = this._router.route(path)
+        route.put(...handler)
         return this
     }
 
@@ -251,17 +232,12 @@ class App extends EventEmitter {
     }
 
     all (path:any, ...handler:Function[]){
-        this.lazyrouter()
         const route = this._router.route(path);
 
-        for(const method of methods){
-            route[method].apply(route, handler)
-        }
+        // for(const method of methods){
+        //     route[method].apply(route, handler)
+        // }
         return this
-    }
-
-    render(){
-
     }
 
     listen(...args: any){

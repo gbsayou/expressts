@@ -26,10 +26,10 @@ class Layer {
     params: any;
     keys: Array<any>;
     regexp: any;
-    path: any;
+    path: string | undefined;
     method: any;
     route: any;
-    constructor(path: any, options: any = {}, fn: any) {
+    constructor(path: string, options: any = {}, fn: any) {
         myDebug(`new ${path}`)
         this.handle = fn
         this.name = fn.name || '<anonymous>'
@@ -90,13 +90,13 @@ class Layer {
         this.params = {};
         this.path = match[0]
 
-        var keys = this.keys;
-        var params = this.params;
+        const keys: Array<any> = this.keys;
+        const params = this.params;
 
-        for (var i = 1; i < match.length; i++) {
-            var key = keys[i - 1];
-            var prop = key.name;
-            var val = decode_param(match[i])
+        for (let i = 1; i < match.length; i++) {
+            const key: any = keys[i - 1];
+            const prop = key.name;
+            const val = decode_param(match[i])
 
             if (val !== undefined || !(hasOwnProperty.call(params, prop))) {
                 params[prop] = val;
