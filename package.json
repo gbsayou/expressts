@@ -15,6 +15,7 @@
     "array-flatten": "^3.0.0",
     "body-parser": "^1.19.0",
     "content-disposition": "^0.5.3",
+    "content-type": "^1.0.4",
     "cookie": "^0.4.1",
     "cookie-signature": "^1.1.0",
     "debug": "^4.3.1",
@@ -66,6 +67,11 @@
     "@types/range-parser": "^1.2.3",
     "@types/send": "^0.14.5",
     "@types/statuses": "^2.0.0",
-    "@types/vary": "^1.1.0"
+    "@types/vary": "^1.1.0",
+    "@typescript-eslint/eslint-plugin": "^4.4.1",
+    "@typescript-eslint/parser": "^4.14.0",
+    "eslint": "^7.18.0",
+    "eslint-config-airbnb-typescript": "^12.0.0",
+    "eslint-plugin-import": "^2.22.0"
   }
 }

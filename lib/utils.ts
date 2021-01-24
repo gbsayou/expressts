@@ -1,31 +1,30 @@
 import etag from 'etag';
 import querystring from 'querystring';
-import qs from 'qs'
+import qs from 'qs';
 import proxyaddr from 'proxy-addr';
 import { Buffer } from 'safe-buffer';
-import { mime } from 'send'
+import { mime } from 'send';
 import contentType from 'content-type';
 
 const createETagGenerator = (options: object) => {
   const generateETag = (body: any, encoding: string) => {
     const buf: any = !Buffer.isBuffer(body)
-      ? Buffer.from(body.encoding)
-      : body
-    return etag(buf, options)
-  }
-}
-const strongTag = createETagGenerator({ weak: true })
-const weakTag = createETagGenerator({ weak: false })
+      ? Buffer.from(body, encoding)
+      : body;
+    return etag(buf, options);
+  };
+  return generateETag;
+};
+const strongTag = createETagGenerator({ weak: true });
+const weakTag = createETagGenerator({ weak: false });
 
-const parseExtendedQueryString = (str: string) => {
-  return qs.parse(str, {
-    allowPrototypes: true
-  })
-}
+const parseExtendedQueryString = (str: string) => qs.parse(str, {
+  allowPrototypes: true,
+});
 export const compileETag = (val: any) => {
   let fn: any;
   if (typeof val === 'function') {
-    return val
+    return val;
   }
   switch (val) {
     case true:
@@ -40,13 +39,13 @@ export const compileETag = (val: any) => {
       fn = strongTag;
       break;
     default:
-      throw new TypeError(`unknown value for etag function: ${val}`)
+      throw new TypeError(`unknown value for etag function: ${val}`);
   }
   return fn;
-}
+};
 
 export const compileQueryParser = (val: any) => {
-  let fn: any
+  let fn: any;
 
   if (typeof val === 'function') {
     return val;
@@ -66,23 +65,23 @@ export const compileQueryParser = (val: any) => {
       fn = querystring.parse;
       break;
     default:
-      throw new TypeError('unknown value for query parser function: ' + val);
+      throw new TypeError(`unknown value for query parser function: ${val}`);
   }
 
   return fn;
-}
+};
 
 export const compileTrust = (val: any) => {
   if (typeof val === 'function') return val;
 
   if (val === true) {
     // Support plain true/false
-    return function () { return true };
+    return () => true;
   }
 
   if (typeof val === 'number') {
     // Support trusting hop count
-    return (a: any, i: any) => { return i < val };
+    return (a: any, i: any) => i < val;
   }
 
   if (typeof val === 'string') {
@@ -91,55 +90,56 @@ export const compileTrust = (val: any) => {
   }
 
   return proxyaddr.compile(val || []);
-}
+};
 
 export const isAbsolute = (path: string) => {
-  if ('/' === path[0]) return true;
-  if (':' === path[1] && ('\\' === path[2] || '/' === path[2])) return true; // Windows device path
-  if ('\\\\' === path.substring(0, 2)) return true; // Microsoft Azure absolute path
-}
+  if (path[0] === '/') return true;
+  if (path[1] === ':' && (path[2] === '\\' || path[2] === '/')) return true; // Windows device path
+  if (path.substring(0, 2) === '\\\\') return true; // Microsoft Azure absolute path
+};
 
 const acceptParams = (str: string, index?: number) => {
-  var parts = str.split(/ *; */);
-  var ret: any = { value: parts[0], quality: 1, params: {}, originalIndex: index };
+  const parts = str.split(/ *; */);
+  const ret: any = {
+    value: parts[0], quality: 1, params: {}, originalIndex: index,
+  };
 
-  for (var i = 1; i < parts.length; ++i) {
-    var pms = parts[i].split(/ *= */);
-    if ('q' === pms[0]) {
+  for (let i = 1; i < parts.length; ++i) {
+    const pms = parts[i].split(/ *= */);
+    if (pms[0] === 'q') {
       ret.quality = parseFloat(pms[1]);
     } else {
+      // eslint-disable-next-line prefer-destructuring
       ret.params[pms[0]] = pms[1];
     }
   }
 
   return ret;
-}
-export const normalizeType = (type: any) => {
-  return ~type.indexOf('/')
-    ? acceptParams(type)
-    : { value: mime.getType(type), params: {} };
-}
+};
+// eslint-disable-next-line no-bitwise
+export const normalizeType = (type: any) => (~type.indexOf('/')
+  ? acceptParams(type)
+  : { value: mime.getType(type), params: {} });
 export const normalizeTypes = (types: any) => {
+  const ret = [];
 
-  var ret = [];
-
-  for (var i = 0; i < types.length; ++i) {
+  for (let i = 0; i < types.length; ++i) {
     ret.push(exports.normalizeType(types[i]));
   }
 
   return ret;
-}
+};
 export const setCharset = (type: any, charset: any) => {
   if (!type || !charset) {
     return type;
   }
 
   // parse type
-  var parsed = contentType.parse(type);
+  const parsed = contentType.parse(type);
 
   // set charset
   parsed.parameters.charset = charset;
 
   // format type
   return contentType.format(parsed);
-}
+};

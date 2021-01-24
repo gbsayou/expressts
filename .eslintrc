@@ -1,0 +1,27 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "airbnb-typescript/base"
+    ],
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "overrides": [
+      {
+        "files": ["**/*.ts"],
+        "rules": {
+          "no-continue": "off",
+          "@typescript-eslint/no-shadow": "off",
+          "no-param-reassign": "off",
+          "no-plusplus": "off",
+          "consistent-return": "off",
+          "no-console": "off"
+        }
+      }
+    ]
+  }
