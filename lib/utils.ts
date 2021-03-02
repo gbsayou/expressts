@@ -3,7 +3,7 @@ import querystring from 'querystring';
 import qs from 'qs';
 import proxyaddr from 'proxy-addr';
 import { Buffer } from 'safe-buffer';
-import { mime } from 'send';
+import mime from 'mime';
 import contentType from 'content-type';
 
 const createETagGenerator = (options: object) => {
