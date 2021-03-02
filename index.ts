@@ -1,3 +1,3 @@
-import express from './lib/express'
+import express from './lib/express';
 
-export default express
+export default express;
