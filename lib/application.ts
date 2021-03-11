@@ -40,18 +40,15 @@ class App extends EventEmitter {
     if (caseSensitiveRouting) this.enable('caseSensitiveRouting');
     if (strictRouting) this.enable('strictRouting');
 
-    this.request = Object.create(new Req('request'), {
-      app: {
-        configurable: true, enumerable: true, writable: true, value: this,
-      },
+    this.request = new Req({
+      app: this,
+    });
+
+    this.response = new Res({
+      app: this,
     });
 
     // expose the prototype that will get set on responses
-    this.response = Object.create(new Res('response'), {
-      app: {
-        configurable: true, enumerable: true, writable: true, value: this,
-      },
-    });
 
     this.router = new Router({
       caseSensitive: caseSensitiveRouting,

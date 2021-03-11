@@ -101,13 +101,13 @@ const wrap = (old: Function, fn: Function) => (...args: any[]) => {
 };
 
 class Router {
-  options: {strict:boolean, caseSensitive: boolean};
+  options: { strict:boolean, caseSensitive: boolean };
 
   params: any;
 
   stack: Array<Layer>;
 
-  constructor(options: {strict:boolean, caseSensitive: boolean}) {
+  constructor(options: { strict:boolean, caseSensitive: boolean }) {
     this.options = options;
     this.params = {};
     this.stack = [];

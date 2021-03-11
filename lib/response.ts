@@ -1,3 +1,4 @@
+/* eslint-disable import/no-cycle */
 import { Buffer } from 'safe-buffer';
 import contentDisposition from 'content-disposition';
 import encodeurl from 'encodeurl';
@@ -18,6 +19,7 @@ import {
 } from './utils';
 
 import ExpressError from './types/ExpressError';
+import App from './application';
 
 const { extname } = path;
 const { resolve } = path;
@@ -145,14 +147,14 @@ class Res extends http.ServerResponse {
 
   contentType: any;
 
-  req: any;
-
-  app: any;
+  app: App;
 
   locals: Object;
 
-  constructor(name: any) {
-    super(name);
+  constructor(config: any) {
+    super(config);
+    const { app } = config;
+    this.app = app;
     this.header = this.set;
     this.contentType = this.type;
     this.locals = Object.create(null);
@@ -172,7 +174,7 @@ class Res extends http.ServerResponse {
   send(body: any): any {
     let chunk: any = body;
     let encoding:any;
-    const { req } = this;
+    const { request } = this.app;
     let type;
 
     // settings
@@ -258,7 +260,7 @@ class Res extends http.ServerResponse {
     }
 
     // freshness
-    if (req.fresh) this.statusCode = 304;
+    if (request.fresh) this.statusCode = 304;
 
     // strip irrelevant headers
     if (this.statusCode === 204 || this.statusCode === 304) {
@@ -268,7 +270,7 @@ class Res extends http.ServerResponse {
       chunk = '';
     }
 
-    if (req.method === 'HEAD') {
+    if (request.method === 'HEAD') {
       // skip body for HEAD
       this.end();
     } else {
@@ -306,7 +308,7 @@ class Res extends http.ServerResponse {
     const replacer = app.get('json replacer');
     const spaces = app.get('json spaces');
     let body = stringify(val, replacer, spaces, escape);
-    let callback = this.req.query[app.get('jsonp callback name')];
+    let callback = this.app.request.query[app.get('jsonp callback name')];
 
     // content-type
     if (!this.get('Content-Type')) {
@@ -351,9 +353,9 @@ class Res extends http.ServerResponse {
 
   sendFile(path: any, options: any, callback: any) {
     let done = callback;
-    const { req } = this;
+    const { request } = this.app;
     const res = this;
-    const { next } = req;
+    const { next } = request;
     let opts = options || {};
 
     if (!path) {
@@ -376,15 +378,15 @@ class Res extends http.ServerResponse {
 
     // create file stream
     const pathname = encodeURI(path);
-    const file = send(req, pathname, opts);
+    const file = send(request, pathname, opts);
 
     // transfer
     sendfile(res, file, opts, (err:ExpressError) => {
       if (done) return done(err);
-      if (err && err.code === 'EISDIR') return next();
+      if (err && err.code === 'EISDIR' && next) return next();
 
       // next() all but write errors
-      if (err && err.code !== 'ECONNABORTED' && err.syscall !== 'write') {
+      if (err && err.code !== 'ECONNABORTED' && err.syscall !== 'write' && next) {
         next(err);
       }
     });
@@ -441,25 +443,25 @@ class Res extends http.ServerResponse {
   }
 
   format(obj: any) {
-    const { req } = this;
-    const { next } = req;
+    const { request } = this.app;
+    const { next } = request;
 
     const fn = obj.default;
     if (fn) delete obj.default;
     const keys = Object.keys(obj);
 
     const key = keys.length > 0
-      ? req.accepts(keys)
+      ? request.accepts(keys)
       : false;
 
     this.vary('Accept');
 
     if (key) {
       this.set('Content-Type', normalizeType(key).value);
-      obj[key](req, this, next);
+      obj[key](request, this, next);
     } else if (fn) {
       fn();
-    } else {
+    } else if (next) {
       const err: any = new Error('Not Acceptable');
       err.statusCode = 406;
       err.status = 406;
@@ -533,7 +535,7 @@ class Res extends http.ServerResponse {
 
   cookie(name: string, value: any, options: any) {
     const opts: any = { ...options };
-    const { secret } = this.req;
+    const { secret } = this.app.request;
     const { signed } = opts;
 
     if (signed && !secret) {
@@ -544,7 +546,7 @@ class Res extends http.ServerResponse {
       ? `j:${JSON.stringify(value)}`
       : String(value);
 
-    if (signed) {
+    if (signed && secret) {
       val = `s:${sign(val, secret)}`;
     }
 
@@ -563,11 +565,11 @@ class Res extends http.ServerResponse {
   }
 
   location(url: string) {
-    let loc = url;
+    let loc: string = url;
 
     // "back" is an alias for the referrer
     if (url === 'back') {
-      loc = this.req.get('Referrer') || '/';
+      loc = this.app.request.get('Referrer') || '/';
     }
 
     // set location
@@ -612,7 +614,7 @@ class Res extends http.ServerResponse {
     this.statusCode = status;
     this.set('Content-Length', Buffer.byteLength(body));
 
-    if (this.req.method === 'HEAD') {
+    if (this.app.request.method === 'HEAD') {
       this.end();
     } else {
       this.end(body);

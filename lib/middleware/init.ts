@@ -9,8 +9,7 @@ const init = (app: App) => {
     if (app.enabled('x-powered-by')) {
       res.setHeader('X-Powered-By', 'Expressts');
     }
-    req.res = res;
-    res.req = req;
+
     req.next = next;
 
     setPrototypeOf(req, app.request);

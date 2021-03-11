@@ -1,3 +1,5 @@
+/* eslint-disable no-case-declarations */
+/* eslint-disable import/no-cycle */
 import accepts from 'accepts';
 import { isIP } from 'net';
 import typeis from 'type-is';
@@ -6,14 +8,16 @@ import fresh from 'fresh';
 import parseRange from 'range-parser';
 import parse from 'parseurl';
 import proxyaddr from 'proxy-addr';
+import App from './application';
 
 class Req extends http.IncomingMessage {
-  constructor(name: any) {
-    super(name);
-    this.name = name;
+  constructor(config: any) {
+    super(config);
+    const { app } = config;
+    this.app = app;
   }
 
-  name: string;
+  secret: string | undefined;
 
   acceptsEncoding: any;
 
@@ -29,9 +33,7 @@ class Req extends http.IncomingMessage {
 
   connection: any;
 
-  app: any;
-
-  res: any;
+  app: App;
 
   next: Function | undefined;
 
@@ -117,8 +119,8 @@ class Req extends http.IncomingMessage {
 
   public get fresh() {
     const { method } = this;
-    const { res } = this;
-    const status = res.statusCode;
+    const { response } = this.app;
+    const status = response.statusCode;
 
     // GET or HEAD for weak freshness validation only
     if (method !== 'GET' && method !== 'HEAD') return false;
@@ -126,8 +128,8 @@ class Req extends http.IncomingMessage {
     // 2xx or 304 as per rfc2616 14.26
     if ((status >= 200 && status < 300) || status === 304) {
       return fresh(this.headers, {
-        etag: res.get('ETag'),
-        'last-modified': res.get('Last-Modified'),
+        etag: response.get('ETag'),
+        'last-modified': response.get('Last-Modified'),
       });
     }
 
@@ -143,16 +145,18 @@ class Req extends http.IncomingMessage {
     return val.toLowerCase() === 'xmlhttprequest';
   }
 
-  get(name: string) {
+  get(name: string): string| undefined {
     const lc = name.toLowerCase();
 
+    const { headers } = this;
     switch (lc) {
       case 'referer':
       case 'referrer':
-        return this.headers.referrer
-                    || this.headers.referer;
+        const referrer = headers.referrer || headers.referer;
+        return Array.isArray(referrer) ? referrer[0] : referrer;
       default:
-        return this.headers[lc];
+        const result = headers[lc];
+        return Array.isArray(result) ? result[0] : result;
     }
   }
 
@@ -169,7 +173,7 @@ class Req extends http.IncomingMessage {
     }
   }
 
-  accepts(...types: string[]): any {
+  accepts(types: string[]): any {
     const accept = accepts(this);
     return accept.types(...types);
   }
