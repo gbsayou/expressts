@@ -1,5 +1,4 @@
 import accepts from 'accepts';
-import deprecate from 'depd';
 import { isIP } from 'net';
 import typeis from 'type-is';
 import http from 'http';
@@ -8,9 +7,14 @@ import parseRange from 'range-parser';
 import parse from 'parseurl';
 import proxyaddr from 'proxy-addr';
 
-const myDeprecate = deprecate('express');
-
 class Req extends http.IncomingMessage {
+  constructor(name: any) {
+    super(name);
+    this.name = name;
+  }
+
+  name: string;
+
   acceptsEncoding: any;
 
   acceptsCharset: any;
@@ -30,16 +34,6 @@ class Req extends http.IncomingMessage {
   res: any;
 
   next: Function | undefined;
-
-  constructor(name: any) {
-    super(name);
-    this.acceptsEncoding = myDeprecate.function(this.acceptsEncodings,
-      'req.acceptsEncoding: Use acceptsEncodings instead');
-    this.acceptsCharset = myDeprecate.function(this.acceptsCharsets,
-      'req.acceptsCharset: Use acceptsCharsets instead');
-    this.acceptsLanguage = myDeprecate.function(this.acceptsLanguages,
-      'req.acceptsLanguage: Use acceptsLanguages instead');
-  }
 
   public get protocol() {
     const proto = this.connection.encrypted
@@ -119,10 +113,6 @@ class Req extends http.IncomingMessage {
     return index !== -1
       ? host.substring(0, index)
       : host;
-  }
-
-  public get host() {
-    return myDeprecate.function(() => this.hostname, 'req.host: Use req.hostname instead');
   }
 
   public get fresh() {
@@ -210,11 +200,6 @@ class Req extends http.IncomingMessage {
     const body = this.body || {};
     const query = this.query || {};
 
-    const args = typeof defaultValue === 'undefined'
-      ? 'name'
-      : 'name, default';
-    myDeprecate(`req.param(${args}): Use req.params, req.body, or req.query instead`);
-
     if (params[name] != null
         && Object.prototype.hasOwnProperty.call(params, name)) return params[name];
     if (body[name] != null) return body[name];
@@ -227,4 +212,5 @@ class Req extends http.IncomingMessage {
     return typeis(this, types);
   }
 }
+
 export default Req;

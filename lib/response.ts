@@ -1,6 +1,5 @@
 import { Buffer } from 'safe-buffer';
 import contentDisposition from 'content-disposition';
-import deprecate from 'depd';
 import encodeurl from 'encodeurl';
 
 import escapeHtml from 'escape-html';
@@ -23,7 +22,6 @@ import ExpressError from './types/ExpressError';
 const { extname } = path;
 const { resolve } = path;
 
-const myDeprecate = deprecate('express');
 const charsetRegExp = /;\s*charset\s*=/;
 
 const sendfile = (res: Res, file: SendStream, options: any, callback: Function) => {
@@ -187,7 +185,7 @@ class Res extends http.ServerResponse {
         this.type('txt');
       }
 
-      myDeprecate('res.send(status): Use res.sendStatus(status) instead');
+      // myDeprecate('res.send(status): Use res.sendStatus(status) instead');
       this.statusCode = chunk;
       chunk = (statuses as any)[chunk];
     }
@@ -586,7 +584,7 @@ class Res extends http.ServerResponse {
       if (typeof url[0] === 'number') {
         [status, address] = url;
       } else {
-        myDeprecate('res.redirect(url, status): Use res.redirect(status, url) instead');
+        // myDeprecate('res.redirect(url, status): Use res.redirect(status, url) instead');
         [,status] = url;
       }
     }
@@ -624,7 +622,7 @@ class Res extends http.ServerResponse {
   vary(field: any) {
     // checks for back-compat
     if (!field || (Array.isArray(field) && !field.length)) {
-      myDeprecate('res.vary(): Provide a field name');
+      // myDeprecate('res.vary(): Provide a field name');
       return this;
     }
 
