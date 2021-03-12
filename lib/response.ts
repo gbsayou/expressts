@@ -5,12 +5,11 @@ import encodeurl from 'encodeurl';
 
 import escapeHtml from 'escape-html';
 import http from 'http';
-import onFinished from 'on-finished';
 import path from 'path';
 import statuses from 'statuses';
 import { sign } from 'cookie-signature';
 import cookie from 'cookie';
-import send, { SendStream } from 'send';
+import send from 'send';
 
 import vary from 'vary';
 import mime from 'mime';
@@ -18,103 +17,13 @@ import {
   isAbsolute, normalizeType, normalizeTypes, setCharset,
 } from './utils';
 
-import ExpressError from './types/ExpressError';
 import App from './application';
+import Send from './helpers/sendFile';
 
 const { extname } = path;
 const { resolve } = path;
 
 const charsetRegExp = /;\s*charset\s*=/;
-
-const sendfile = (res: Res, file: SendStream, options: any, callback: Function) => {
-  let done: boolean = false;
-  let streaming: boolean;
-
-  // request aborted
-  const onaborted = () => {
-    if (done) return;
-    done = true;
-
-    const err = new ExpressError('Request aborted');
-    err.code = 'ECONNABORTED';
-    callback(err);
-  };
-
-  // directory
-  const ondirectory = () => {
-    if (done) return;
-    done = true;
-
-    const err = new ExpressError('EISDIR, read');
-    err.code = 'EISDIR';
-    callback(err);
-  };
-
-  // errors
-  const onerror = (err: any) => {
-    if (done) return;
-    done = true;
-    callback(err);
-  };
-
-  // ended
-  const onend = () => {
-    if (done) return;
-    done = true;
-    callback();
-  };
-
-  // file
-  const onfile = () => {
-    streaming = false;
-  };
-
-  // finished
-  const onfinish = (err: any) => {
-    if (err && err.code === 'ECONNRESET') return onaborted();
-    if (err) return onerror(err);
-    if (done) return;
-
-    setImmediate(() => {
-      if (streaming !== false && !done) {
-        onaborted();
-        return;
-      }
-
-      if (done) return;
-      done = true;
-      callback();
-    });
-  };
-
-  // streaming
-  const onstream = () => {
-    streaming = true;
-  };
-
-  file.on('directory', ondirectory);
-  file.on('end', onend);
-  file.on('error', onerror);
-  file.on('file', onfile);
-  file.on('stream', onstream);
-  onFinished(res, onfinish);
-
-  if (options.headers) {
-    // set headers on successful transfer
-    file.on('headers', (res: Res) => {
-      const obj = options.headers;
-      const keys = Object.keys(obj);
-
-      for (let i = 0; i < keys.length; i++) {
-        const k = keys[i];
-        res.setHeader(k, obj[k]);
-      }
-    });
-  }
-
-  // pipe
-  file.pipe(res);
-};
 
 const stringify = (value: any, replacer: any, spaces: number, escape: boolean): string => {
   // v8 checks arguments.length for optimizing simple call
@@ -351,37 +260,19 @@ class Res extends http.ServerResponse {
     return this.send(body);
   }
 
-  sendFile(path: any, options: any, callback: any) {
-    let done = callback;
+  sendFile(path: string, options: send.SendOptions, done?: Function) {
     const { request } = this.app;
-    const res = this;
     const { next } = request;
-    let opts = options || {};
 
-    if (!path) {
-      throw new TypeError('path argument is required to res.sendFile');
-    }
-
-    if (typeof path !== 'string') {
-      throw new TypeError('path must be a string to res.sendFile');
-    }
-
-    // support function as second arg
-    if (typeof options === 'function') {
-      done = options;
-      opts = {};
-    }
-
-    if (!opts.root && !isAbsolute(path)) {
+    if (!options.root && !isAbsolute(path)) {
       throw new TypeError('path must be absolute or specify root to res.sendFile');
     }
 
     // create file stream
     const pathname = encodeURI(path);
-    const file = send(request, pathname, opts);
+    const file = send(request, pathname, options);
 
-    // transfer
-    sendfile(res, file, opts, (err:ExpressError) => {
+    const cb = (err:NodeJS.ErrnoException) => {
       if (done) return done(err);
       if (err && err.code === 'EISDIR' && next) return next();
 
@@ -389,7 +280,9 @@ class Res extends http.ServerResponse {
       if (err && err.code !== 'ECONNABORTED' && err.syscall !== 'write' && next) {
         next(err);
       }
-    });
+    };
+    const sender = new Send(this, cb);
+    sender.send(file);
   }
 
   download(path: any, filename: any, options: any, callback: any) {
@@ -564,15 +457,17 @@ class Res extends http.ServerResponse {
     return this;
   }
 
+  /**
+   *
+   * @param url
+   * @returns
+   */
   location(url: string) {
     let loc: string = url;
-
     // "back" is an alias for the referrer
     if (url === 'back') {
       loc = this.app.request.get('Referrer') || '/';
     }
-
-    // set location
     return this.set('Location', encodeurl(loc));
   }
 
